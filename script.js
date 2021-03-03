@@ -3,7 +3,7 @@ const questions = `${baseAPI}/questions`;
 const filter = "!m)ASvzmwfr403f*F5dU1)8hbeB3Kgkc8rhKafuMzR-Es.)4fbDi5D6gX";
 
 const accordionId = "accordionQuestions";
-const err = document.getElementById("error");
+const errMsg = document.getElementById("error");
 
 function buildUrl(sort, tag) {
   const today = Math.floor(new Date().getTime() / 1000);
@@ -16,7 +16,7 @@ function createAccordion(title, id, score, creation, rest) {
   div.className = "accordion-item";
   const item = `<h2 class="accordion-header" id="heading${id}">
       <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${id}">
-        <b>${title}</b> <i><b>. Creation:</b> ${creation} / <b>Score:</b> ${score} </i>
+        <b>${title}</b> <br/> <i>Created: ${creation} / Score: ${score} </i>
       </button>
     </h2>
     <div id="collapse${id}" class="accordion-collapse collapse" data-bs-parent="#${accordionId}">
@@ -46,9 +46,8 @@ function replies(type, items) {
     const { creation_date, score } = item;
     const date = new Date(creation_date * 1000);
     var element = createCard(type, date, score, item.body);
-    if (type === "Answer" && item.comments) {
+    if (type === "Answer" && item.comments)
       addChildren(element, replies("Comment", item.comments));
-    }
     children.push(element);
   }
   return children;
@@ -61,12 +60,8 @@ function addChildren(parent, list) {
 function buildBody(body, answers, comments) {
   var div = document.createElement("div");
   div.innerHTML = body;
-  if (comments) {
-    addChildren(div, replies("Comment", comments));
-  }
-  if (answers) {
-    addChildren(div, replies("Answer", answers));
-  }
+  if (comments) addChildren(div, replies("Comment", comments));
+  if (answers) addChildren(div, replies("Answer", answers));
   return div;
 }
 
@@ -106,7 +101,13 @@ function extract(list, count) {
 async function call() {
   const input = document.getElementById("tag");
   if (input.value) {
-    err.style.display = "none";
+    var accordion = document.getElementById(accordionId);
+    var button = document.getElementById("button");
+    var spinner = document.getElementById("spinner");
+    accordion.innerHTML = "";
+    spinner.style.display = "block";
+    button.disabled = true;
+    errMsg.style.display = "none";
     try {
       var url = buildUrl("creation", input.value);
       const byCreation = await apiCall(url);
@@ -117,22 +118,27 @@ async function call() {
       const votes = extract(byVotes.items, 10);
 
       var questions = created.concat(votes);
-      questions.sort(function (first, second) {
-        return first.creation_date > second.creation_date;
-      });
+      if (questions && questions.length > 0) {
+        questions.sort(function (first, second) {
+          return first.creation_date > second.creation_date;
+        });
 
-      var accordion = document.getElementById(accordionId);
-      elements(accordion, questions);
+        elements(accordion, questions);
+      } else {
+        setError("Tag not found");
+      }
     } catch (err) {
       console.error(err);
       setError("Something went wrong, please try again later");
     }
+    button.disabled = false;
+    spinner.style.display = "none";
   } else {
     setError("Please enter a tag");
   }
 }
 
 function setError(msg) {
-  err.innerHTML = msg;
-  err.style.display = "block";
+  errMsg.innerHTML = msg;
+  errMsg.style.display = "block";
 }
